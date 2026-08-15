@@ -1,0 +1,82 @@
+# Как здесь разрабатывают: SDD-процесс
+
+Этот проект — учебный полигон для отработки spec-driven development (SDD) поверх мультиагентной разработки в Claude Code. Игра — предлог; процесс — цель. Все решения ниже подчинены этой цели: понятность и воспроизводимость процесса важнее скорости написания кода игры.
+
+Подход — гибрид: фазы и артефакты вдохновлены [GitHub spec-kit](https://github.com/github/spec-kit) (`constitution → specify → clarify → plan → tasks → analyze → implement`), но сам механизм построен нативно на примитивах Claude Code — slash-командах (`.claude/commands/`) и именованных субагентах (`.claude/agents/`), а не установкой spec-kit CLI.
+
+## Конвейер ролей
+
+Каждая фаза — независимый субагент со своим контекстом (аналитик → архитектор → разработчик → тестировщик → ревьюер), не персона в общем диалоге. Полное описание ролей и их инструментов — в таблице ниже; сами определения — в [`../.claude/agents/`](../.claude/agents/).
+
+```mermaid
+flowchart TD
+    C["/constitution<br/>(основной поток)"] --> S["/specify<br/>→ analyst"]
+    S --> Q{"остались [NEEDS<br/>CLARIFICATION]?"}
+    Q -- да --> CL["/clarify<br/>→ analyst"]
+    CL --> Q
+    Q -- нет --> P["/plan-feature<br/>→ architect"]
+    P --> T["/tasks<br/>→ architect"]
+    T --> AN["/analyze (опционально)<br/>→ reviewer, advisory"]
+    AN --> I0["/implement"]
+
+    subgraph IMPL["/implement — цикл"]
+        D["developer: TDD<br/>по одной задаче"] --> D
+        D --> TS["tester: сверка<br/>каждого AC-N"]
+        TS -- провал AC --> D
+        TS -- всё ок --> RV["reviewer: код-ревью<br/>(gate)"]
+        RV -- есть находки --> D
+        RV -- чисто --> DOD["Definition of Done"]
+    end
+
+    I0 --> IMPL
+    DOD --> M["/commit (обычный)<br/>merge → master, push,<br/>удаление ветки"]
+```
+
+| Субагент | Роль | Может писать код? | Инструменты |
+|---|---|---|---|
+| `analyst` | Сценарии и acceptance criteria (`AC-N`) в `spec.md` | Нет — только `spec.md` | Read, Grep, Glob, Write, AskUserQuestion, WebSearch |
+| `architect` | Техническое решение (`plan.md`) и разбивка на задачи (`tasks.md`) | Нет — только `plan.md`/`tasks.md` | Read, Grep, Glob, Write, AskUserQuestion |
+| `developer` | Реализация одной задачи по TDD (red-green-refactor) | Да | Read, Write, Edit, Bash*, Grep, Glob, AskUserQuestion |
+| `tester` | Сверка реализации со всеми `AC-N`, интеграционные тесты | Да (тесты) | Read, Write, Edit, Bash*, Grep, Glob, AskUserQuestion |
+| `reviewer` | Независимая проверка: документы (`/analyze`) или код (gate перед commit) | Нет | Read, Grep, Glob, Bash*, AskUserQuestion, ReportFindings |
+
+\* `Bash` у developer/tester/reviewer — только build/test/lint-команды. Git-команды им недоступны и не должны использоваться.
+
+## Два принципа, без которых холодный старт субагентов не работает
+
+1. **Артефакты — единственная память между вызовами.** Субагент не видит историю диалога и не помнит, что делал предыдущий вызов той же роли (даже на соседней задаче той же фичи). Всё важное для следующего шага должно быть зафиксировано в файле — коде, `tasks.md`, `plan.md` — а не только сказано в ответе агента.
+2. **Git-операции — исключительно в основном потоке.** Ни один субагент не выполняет `git branch/checkout/commit/push/merge`. Ветку фичи создаёт оркестрирующая команда (`/specify`) до вызова `analyst`; коммиты — только через `/commit` в основном потоке, под контролем пользователя.
+
+## Acceptance Criteria как сквозной идентификатор
+
+`spec.md` нумерует критерии (`AC-1`, `AC-2`, …) — это единственная связка между фазами: `tasks.md` ссылается на `AC-N` в каждой задаче, `tester` сверяет каждый `AC-N` отдельно, `/analyze` проверяет, что ни один `AC-N` не остался без покрывающей задачи.
+
+## `[P]` в `tasks.md`
+
+Маркер потенциально параллелизуемых задач. В текущей версии `/implement` не используется для реального параллелизма — задачи выполняются строго последовательно. Зарезервирован на будущее (изолированные dev-агенты через `isolation: "worktree"` на независимые группы задач).
+
+## Стыковка с `/commit`
+
+Глобальный `/commit` по умолчанию мержит текущую ветку в `master`, пушит и удаляет её. SDD-фаза живёт на одной feature-ветке от `/specify` до конца `/implement`, поэтому все промежуточные коммиты внутри фазы вызывают `/commit` с аргументом «только закоммить, не мержи и не пушь».
+
+| Команда | Артефакт | `/commit` |
+|---|---|---|
+| `/constitution` | `.specify/memory/constitution.md` | «только закоммить» на фиче; обычный — если правка сделана прямо в `master` |
+| `/specify` | `specs/NNN-feature-name/spec.md`, создаёт ветку | «только закоммить» |
+| `/clarify` | правки в `spec.md` (обязательный гейт, если остались `[NEEDS CLARIFICATION]`) | «только закоммить» |
+| `/plan-feature` | `plan.md` | «только закоммить» |
+| `/tasks` | `tasks.md` | «только закоммить» |
+| `/analyze` | только отчёт (advisory) | не требуется |
+| `/implement` | код + чек-боксы `tasks.md` | по ходу — «только закоммить»; в конце (Definition of Done) — **обычный** `/commit` |
+
+## Definition of Done для `/implement`
+
+Все задачи `tasks.md` закрыты **и** `tester` подтвердил каждый `AC-N` **и** `reviewer` не имеет открытых находок (или пользователь явно принял оставшиеся). Только тогда — финальный `/commit`.
+
+## Роль встроенного Plan Mode
+
+Plan Mode Claude Code не используется как механизм фазы `/plan-feature` — он пишет один эфемерный файл вне репозитория, а артефакт SDD-фазы должен закоммититься в `specs/NNN/plan.md` и жить в истории проекта. Роль Plan Mode здесь — вспомогательная дисциплина: можно включать вручную перед рискованной задачей внутри `/implement`, или использовать встроенные Explore/Plan-субагенты для ресёрча по крупным фичам.
+
+## Полный список команд
+
+`/constitution`, `/specify`, `/clarify`, `/plan-feature`, `/tasks`, `/analyze`, `/implement` — определения в [`../.claude/commands/`](../.claude/commands/).
