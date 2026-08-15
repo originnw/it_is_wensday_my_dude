@@ -34,13 +34,15 @@ flowchart TD
 
 | Субагент | Роль | Может писать код? | Инструменты |
 |---|---|---|---|
-| `analyst` | Сценарии и acceptance criteria (`AC-N`) в `spec.md` | Нет — только `spec.md` | Read, Grep, Glob, Write, AskUserQuestion, WebSearch |
-| `architect` | Техническое решение (`plan.md`) и разбивка на задачи (`tasks.md`) | Нет — только `plan.md`/`tasks.md` | Read, Grep, Glob, Write, AskUserQuestion |
-| `developer` | Реализация одной задачи по TDD (red-green-refactor) | Да | Read, Write, Edit, Bash*, Grep, Glob, AskUserQuestion |
-| `tester` | Сверка реализации со всеми `AC-N`, интеграционные тесты | Да (тесты) | Read, Write, Edit, Bash*, Grep, Glob, AskUserQuestion |
-| `reviewer` | Независимая проверка: документы (`/analyze`) или код (gate перед commit) | Нет | Read, Grep, Glob, Bash*, AskUserQuestion, ReportFindings |
+| `analyst` | Сценарии и acceptance criteria (`AC-N`) в `spec.md` | Нет — только `spec.md` | Read, Grep, Glob, Write, WebSearch |
+| `architect` | Техническое решение (`plan.md`) и разбивка на задачи (`tasks.md`) | Нет — только `plan.md`/`tasks.md` | Read, Grep, Glob, Write |
+| `developer` | Реализация одной задачи по TDD (red-green-refactor) | Да | Read, Write, Edit, Bash*, Grep, Glob |
+| `tester` | Сверка реализации со всеми `AC-N`, интеграционные тесты | Да (тесты) | Read, Write, Edit, Bash*, Grep, Glob |
+| `reviewer` | Независимая проверка: документы (`/analyze`) или код (gate перед commit) | Нет | Read, Grep, Glob, Bash*, ReportFindings |
 
 \* `Bash` у developer/tester/reviewer — только build/test/lint-команды. Git-команды им недоступны и не должны использоваться.
+
+`AskUserQuestion` намеренно отсутствует у всех субагентов — это ограничение платформы: субагенты не могут задавать вопросы пользователю напрямую (вызов инструмента завершается ошибкой). Когда роли нужно решение пользователя, она останавливается и возвращает оркестратору блок `## ВОПРОСЫ ПОЛЬЗОВАТЕЛЮ`; оркестрирующая команда в основном потоке задаёт эти вопросы через `AskUserQuestion` и возвращает ответы тому же вызову субагента через `SendMessage`, чтобы он закончил работу с полным контекстом. Этот механизм зашит в каждую из команд `/specify`, `/clarify`, `/plan-feature`, `/tasks`, `/implement`.
 
 ## Два принципа, без которых холодный старт субагентов не работает
 
