@@ -15,6 +15,7 @@ argument-hint: описание фичи в свободной форме (чт�
 4. Создай и переключись на ветку `feature/NNN-feature-name` от актуального `master` (`git fetch origin && git checkout master && git pull origin master && git checkout -b feature/NNN-feature-name`).
 5. Создай директорию `specs/NNN-feature-name/`.
 6. Вызови subagent `analyst` (Agent tool, `subagent_type: "analyst"`, foreground — следующий шаг зависит от результата) с самодостаточным prompt, включающим: полное описание фичи из `$ARGUMENTS`, путь `specs/NNN-feature-name/spec.md` куда писать, путь к `.specify/templates/spec-template.md`, путь к `.specify/memory/constitution.md`.
-7. После завершения — покажи пользователю итоговый `spec.md`, явно укажи, остались ли `[NEEDS CLARIFICATION]` маркеры.
-8. Предложи `/commit` с аргументом «только закоммить, не мержи и не пушь» — ветку фичи не трогать.
-9. Если остались `[NEEDS CLARIFICATION]` маркеры — напомни про `/clarify`; если нет — напомни про `/plan-feature`.
+7. `analyst` не может спрашивать пользователя напрямую — если в его ответе есть блок `## ВОПРОСЫ ПОЛЬЗОВАТЕЛЮ` (критичная неоднозначность, без которой спеку писать бессмысленно), задай эти вопросы через `AskUserQuestion` в основном потоке, затем через `SendMessage` верни ответы тому же вызову `analyst`, чтобы он дописал `spec.md`. Повтори при необходимости.
+8. После завершения — покажи пользователю итоговый `spec.md`, явно укажи, остались ли `[NEEDS CLARIFICATION]` маркеры.
+9. Предложи `/commit` с аргументом «только закоммить, не мержи и не пушь» — ветку фичи не трогать.
+10. Если остались `[NEEDS CLARIFICATION]` маркеры — напомни про `/clarify`; если нет — напомни про `/plan-feature`.
