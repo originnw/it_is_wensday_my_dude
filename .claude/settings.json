@@ -15,7 +15,9 @@
       "Bash(npm run lint)",
       "Bash(npm run lint *)",
       "Bash(npm run dev)",
-      "Bash(npm run dev *)"
+      "Bash(npm run dev *)",
+      "Bash(tasklist *)",
+      "mcp__plugin_figma_figma__get_metadata"
     ]
   }
 }
