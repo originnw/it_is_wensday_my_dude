@@ -6,4 +6,10 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
   },
+  // Игровая логика (game/*.ts) не трогает DOM/canvas (принцип IV конституции,
+  // AC-12 фичи 001-frog-movement), поэтому окружение "node" достаточно —
+  // jsdom не подключаем.
+  test: {
+    environment: 'node',
+  },
 });
