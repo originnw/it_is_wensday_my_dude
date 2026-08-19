@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { createFrogState, updateFrog, FROG_SPEED_PX_S, FROG_WIDTH_PX, JUMP_DURATION_S, JUMP_HEIGHT_PX } from './frog';
+import {
+  createFrogState,
+  updateFrog,
+  getFrogRect,
+  FROG_SPEED_PX_S,
+  FROG_WIDTH_PX,
+  FROG_HEIGHT_PX,
+  FROG_CROUCH_HEIGHT_MULTIPLIER,
+  JUMP_DURATION_S,
+  JUMP_HEIGHT_PX,
+} from './frog';
 
 // Решение T002 (не зафиксировано дословно в data-model.md/plan.md): createFrogState
 // принимает worldWidth, чтобы вычислить стартовый x как центр видимой ширины canvas
@@ -470,5 +480,62 @@ describe('приседание (AC-10, AC-11)', () => {
 
     expect(state.isCrouching).toBe(true);
     expect(state.x - startX).toBeCloseTo(-FROG_SPEED_PX_S, 5);
+  });
+});
+
+// T002 (002-insects-and-bonuses): getFrogRect() — единственный источник истины
+// для прямоугольной зоны тела лягушки в её текущем визуальном состоянии
+// (переиспользуется и render/frog.ts, и логикой столкновений в game/world.ts,
+// plan.md §«game/frog.ts — точечное расширение»). updateFrog()/createFrogState()
+// выше не затронуты.
+describe('getFrogRect (AC-5, AC-8)', () => {
+  const GROUND_Y = 500;
+
+  it('лягушка стоя: FROG_WIDTH_PX×FROG_HEIGHT_PX, y = groundY - FROG_HEIGHT_PX', () => {
+    const state = createFrogState(WORLD_WIDTH);
+
+    const rect = getFrogRect(state, GROUND_Y);
+
+    expect(rect.x).toBe(state.x);
+    expect(rect.width).toBe(FROG_WIDTH_PX);
+    expect(rect.height).toBe(FROG_HEIGHT_PX);
+    expect(rect.y).toBe(GROUND_Y - FROG_HEIGHT_PX);
+  });
+
+  it('лягушка приседает: высота уменьшена множителем, нижний край остаётся на земле', () => {
+    const state = createFrogState(WORLD_WIDTH);
+    state.isCrouching = true;
+
+    const rect = getFrogRect(state, GROUND_Y);
+    const expectedHeight = FROG_HEIGHT_PX * FROG_CROUCH_HEIGHT_MULTIPLIER;
+
+    expect(rect.height).toBe(expectedHeight);
+    expect(rect.y).toBe(GROUND_Y - expectedHeight);
+    // нижний край (y + height) должен совпадать с землёй, как и стоя
+    expect(rect.y + rect.height).toBe(GROUND_Y);
+  });
+
+  it('лягушка в прыжке: y сдвинут вверх на jumpOffsetY относительно позиции стоя', () => {
+    const state = createFrogState(WORLD_WIDTH);
+    state.isAirborne = true;
+    state.jumpOffsetY = 50;
+
+    const rect = getFrogRect(state, GROUND_Y);
+    const standingY = GROUND_Y - FROG_HEIGHT_PX;
+
+    expect(rect.height).toBe(FROG_HEIGHT_PX);
+    expect(rect.y).toBe(standingY - state.jumpOffsetY);
+  });
+
+  it('лягушка в прыжке на реальной траектории updateFrog: rect.y меняется вместе с jumpOffsetY', () => {
+    const state = createFrogState(WORLD_WIDTH);
+    const dt = JUMP_DURATION_S / 10;
+
+    updateFrog(state, { moveLeft: false, moveRight: false, crouch: false, jumpRequested: true }, dt, WORLD_WIDTH);
+
+    const rect = getFrogRect(state, GROUND_Y);
+
+    expect(state.jumpOffsetY).toBeGreaterThan(0);
+    expect(rect.y).toBe(GROUND_Y - FROG_HEIGHT_PX - state.jumpOffsetY);
   });
 });
