@@ -17,6 +17,15 @@
  */
 
 import type { Rect } from './geometry';
+import {
+  FROG_SPEED_PX_S,
+  FROG_WIDTH_PX,
+  FROG_HEIGHT_PX,
+  JUMP_DURATION_S,
+  JUMP_HEIGHT_PX,
+  CROUCH_JUMP_HEIGHT_MULTIPLIER,
+  FROG_CROUCH_HEIGHT_MULTIPLIER,
+} from './tuning';
 
 // T005: значение скорректировано с изначального дефолта plan.md (240) до 180.
 // Причина: тест "AC-1: перемещает лягушку влево с постоянной скоростью" (frog.test.ts)
@@ -26,17 +35,20 @@ import type { Rect } from './geometry';
 // от значения константы (тест ссылается на неё символически). 180 (180*2=360 <= 384) даёт
 // запас и не задевает край экрана в этом сценарии — правка tuning-параметра, разрешённая
 // plan.md §«Риски и открытые вопросы» (developer вправе корректировать значения в /implement).
-export const FROG_SPEED_PX_S = 180;
-export const FROG_WIDTH_PX = 32;
-export const FROG_HEIGHT_PX = 32;
-export const JUMP_DURATION_S = 0.5;
-export const JUMP_HEIGHT_PX = 120;
-export const CROUCH_JUMP_HEIGHT_MULTIPLIER = 1.5;
-// T008 (002-insects-and-bonuses): перенесено из render/frog.ts (было
-// CROUCH_HEIGHT_MULTIPLIER, локальная константа рендера) — теперь
-// единственный источник истины, т.к. getFrogRect() нужен и чистой логике
-// (game/world.ts, AC-5/AC-8), которая не может импортировать render/*.
-export const FROG_CROUCH_HEIGHT_MULTIPLIER = 0.5;
+//
+// Сами значения теперь живут в game/tuning.ts (единая точка редактирования
+// числовых параметров всей игры) — здесь только re-export под теми же
+// именами, чтобы внешние импорты (`from './frog'` в тестах и других
+// модулях) не менялись.
+export {
+  FROG_SPEED_PX_S,
+  FROG_WIDTH_PX,
+  FROG_HEIGHT_PX,
+  JUMP_DURATION_S,
+  JUMP_HEIGHT_PX,
+  CROUCH_JUMP_HEIGHT_MULTIPLIER,
+  FROG_CROUCH_HEIGHT_MULTIPLIER,
+};
 
 // T006, нетривиальное решение (не зафиксировано в plan.md буквально):
 // сравнение jumpElapsedSeconds >= JUMP_DURATION_S для приземления сделано

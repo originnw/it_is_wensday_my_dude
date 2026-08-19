@@ -86,19 +86,23 @@ export function resolveBonusCollisions(frogRect: Rect, bonuses: BonusesState, ef
  *   6. updateInsects — с учётом multiplier
  *   7. score += resolveInsectCollisions
  *   8. tickEffect — в конце кадра
+ *
+ * `worldHeight` больше не принимается: после правки AC-9/AC-1 (spec.md,
+ * «Сессия уточнений — 2026-08-19») ни бонусы (удаление по groundY), ни
+ * насекомые (удаление только по worldWidth, входа сверху больше нет) не
+ * используют вертикальный размер мира.
  */
 export function updateWorld(
   state: WorldState,
   input: FrogInput,
   deltaTimeSeconds: number,
   worldWidth: number,
-  worldHeight: number,
   groundY: number,
   random: () => number = Math.random,
 ): void {
   updateFrog(state.frog, input, deltaTimeSeconds, worldWidth);
 
-  updateBonuses(state.bonuses, deltaTimeSeconds, worldWidth, worldHeight, random);
+  updateBonuses(state.bonuses, deltaTimeSeconds, worldWidth, groundY, random);
 
   const frogRect = getFrogRect(state.frog, groundY);
 
@@ -106,7 +110,7 @@ export function updateWorld(
 
   const multiplier = insectSpeedMultiplier(state.effect);
 
-  updateInsects(state.insects, deltaTimeSeconds, worldWidth, worldHeight, groundY, multiplier, random);
+  updateInsects(state.insects, deltaTimeSeconds, worldWidth, groundY, multiplier, random);
 
   state.score += resolveInsectCollisions(frogRect, state.insects);
 
