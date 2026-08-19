@@ -9,16 +9,20 @@
  */
 
 import type { BonusSign } from './bonuses';
+import {
+  BONUS_EFFECT_DURATION_S,
+  BONUS_EFFECT_POSITIVE_SPEED_MULTIPLIER,
+  BONUS_EFFECT_NEGATIVE_SPEED_MULTIPLIER,
+} from './tuning';
 
 export interface BonusEffectState {
   sign: BonusSign | null;
   remainingSeconds: number;
 }
 
-// Tuning-параметры (plan.md «Не-цели» — конкретные числа не зафиксированы спекой).
-export const BONUS_EFFECT_DURATION_S = 5;
-export const BONUS_EFFECT_POSITIVE_SPEED_MULTIPLIER = 0.5;
-export const BONUS_EFFECT_NEGATIVE_SPEED_MULTIPLIER = 1.5;
+// Сами значения — в game/tuning.ts; здесь re-export под прежними именами,
+// чтобы внешние импорты (`from './effects'` в тестах) не менялись.
+export { BONUS_EFFECT_DURATION_S, BONUS_EFFECT_POSITIVE_SPEED_MULTIPLIER, BONUS_EFFECT_NEGATIVE_SPEED_MULTIPLIER };
 
 export function createEffectState(): BonusEffectState {
   return { sign: null, remainingSeconds: 0 };

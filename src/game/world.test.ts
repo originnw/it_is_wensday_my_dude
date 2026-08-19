@@ -13,7 +13,6 @@ import { createEffectState, applyBonusEffect, insectSpeedMultiplier, BONUS_EFFEC
 import { FROG_SPEED_PX_S } from './frog';
 
 const WORLD_WIDTH = 800;
-const WORLD_HEIGHT = 600;
 const GROUND_Y = 500;
 
 describe('createWorldState (AC-14, инфраструктура для AC-5/AC-6/AC-8)', () => {
@@ -33,9 +32,9 @@ describe('createWorldState (AC-14, инфраструктура для AC-5/AC-6
 describe('resolveInsectCollisions (AC-5, AC-6) — экспортирована отдельно от updateWorld', () => {
   it('удаляет пересекающихся насекомых из list и возвращает сумму очков по типу, не трогая непересекающихся', () => {
     const frogRect: Rect = { x: 0, y: 0, width: 50, height: 50 };
-    const eatenMosquito: Insect = { type: 'mosquito', x: 10, y: 10, width: 10, height: 10, vx: 0, vy: 0 };
-    const eatenDragonfly: Insect = { type: 'dragonfly', x: 20, y: 20, width: 10, height: 10, vx: 0, vy: 0 };
-    const untouched: Insect = { type: 'mosquito', x: 500, y: 500, width: 10, height: 10, vx: 0, vy: 0 };
+    const eatenMosquito: Insect = { type: 'mosquito', movementType: 'straight', x: 10, y: 10, width: 10, height: 10, vx: 0 };
+    const eatenDragonfly: Insect = { type: 'dragonfly', movementType: 'straight', x: 20, y: 20, width: 10, height: 10, vx: 0 };
+    const untouched: Insect = { type: 'mosquito', movementType: 'straight', x: 500, y: 500, width: 10, height: 10, vx: 0 };
     const insects: InsectsState = { list: [eatenMosquito, eatenDragonfly, untouched], spawnTimerSeconds: 1000 };
 
     const points = resolveInsectCollisions(frogRect, insects);
@@ -46,7 +45,7 @@ describe('resolveInsectCollisions (AC-5, AC-6) — экспортирована 
 
   it('не удаляет ничего и возвращает 0, если ни одно насекомое не пересекается', () => {
     const frogRect: Rect = { x: 0, y: 0, width: 10, height: 10 };
-    const farAway: Insect = { type: 'dragonfly', x: 500, y: 500, width: 10, height: 10, vx: 0, vy: 0 };
+    const farAway: Insect = { type: 'dragonfly', movementType: 'straight', x: 500, y: 500, width: 10, height: 10, vx: 0 };
     const insects: InsectsState = { list: [farAway], spawnTimerSeconds: 1000 };
 
     const points = resolveInsectCollisions(frogRect, insects);
@@ -61,7 +60,7 @@ describe('resolveBonusCollisions (AC-8, AC-14) — экспортирована 
     const frogRect: Rect = { x: 0, y: 0, width: 50, height: 50 };
     const caught: Bonus = { sign: 'negative', x: 10, y: 10, width: 10, height: 10 };
     const untouched: Bonus = { sign: 'positive', x: 500, y: 500, width: 10, height: 10 };
-    const bonuses: BonusesState = { list: [caught, untouched], spawnTimerSeconds: 1000 };
+    const bonuses: BonusesState = { list: [caught, untouched], spawnTimerSeconds: 1000, lastSpawnX: null };
     const effect = createEffectState();
 
     resolveBonusCollisions(frogRect, bonuses, effect);
@@ -74,7 +73,7 @@ describe('resolveBonusCollisions (AC-8, AC-14) — экспортирована 
   it('не трогает эффект и список, если ни один бонус не пересекается', () => {
     const frogRect: Rect = { x: 0, y: 0, width: 10, height: 10 };
     const farAway: Bonus = { sign: 'positive', x: 500, y: 500, width: 10, height: 10 };
-    const bonuses: BonusesState = { list: [farAway], spawnTimerSeconds: 1000 };
+    const bonuses: BonusesState = { list: [farAway], spawnTimerSeconds: 1000, lastSpawnX: null };
     const effect = createEffectState();
 
     resolveBonusCollisions(frogRect, bonuses, effect);
@@ -94,7 +93,6 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
       { moveLeft: false, moveRight: true, crouch: false, jumpRequested: false },
       1,
       WORLD_WIDTH,
-      WORLD_HEIGHT,
       GROUND_Y,
       () => 0.5,
     );
@@ -122,7 +120,7 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
     state.bonuses.spawnTimerSeconds = 1000; // не спавнить новый бонус на этом кадре
 
     // Насекомое уже летит, но НЕ пересекается с лягушкой на этом кадре (проверяем только скорость).
-    const insect: Insect = { type: 'mosquito', x: 400, y: 400, width: 10, height: 10, vx: 100, vy: 0 };
+    const insect: Insect = { type: 'mosquito', movementType: 'straight', x: 400, y: 400, width: 10, height: 10, vx: 100 };
     state.insects.list = [insect];
     state.insects.spawnTimerSeconds = 1000; // не спавнить новое насекомое на этом кадре
 
@@ -131,7 +129,6 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
       { moveLeft: false, moveRight: false, crouch: false, jumpRequested: false },
       dt,
       WORLD_WIDTH,
-      WORLD_HEIGHT,
       GROUND_Y,
       () => 0.5,
     );
@@ -161,7 +158,7 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
 
     state.frog.x = 100; // rect: x 100..132, y 468..500 (groundY=500, FROG_HEIGHT_PX=32)
 
-    const eatenInsect: Insect = { type: 'mosquito', x: 110, y: 480, width: 10, height: 10, vx: 0, vy: 0 };
+    const eatenInsect: Insect = { type: 'mosquito', movementType: 'straight', x: 110, y: 480, width: 10, height: 10, vx: 0 };
     state.insects.list = [eatenInsect];
     state.insects.spawnTimerSeconds = 1000;
     state.bonuses.list = [];
@@ -172,7 +169,6 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
       { moveLeft: false, moveRight: false, crouch: false, jumpRequested: false },
       dt,
       WORLD_WIDTH,
-      WORLD_HEIGHT,
       GROUND_Y,
       () => 0.5,
     );
@@ -196,7 +192,6 @@ describe('updateWorld — порядок 8 шагов (plan.md §game/world.ts)'
       { moveLeft: false, moveRight: false, crouch: false, jumpRequested: false },
       dt,
       WORLD_WIDTH,
-      WORLD_HEIGHT,
       GROUND_Y,
       () => 0.5,
     );

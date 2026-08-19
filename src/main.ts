@@ -6,6 +6,7 @@ import { createInputTracker } from './game/input';
 import { drawFrog } from './render/frog';
 import { drawInsects } from './render/insects';
 import { drawBonuses } from './render/bonuses';
+import { GROUND_MARGIN_PX } from './game/tuning';
 
 const { canvas, ctx } = setupCanvas();
 
@@ -15,10 +16,10 @@ const { canvas, ctx } = setupCanvas();
 const BACKGROUND_COLOR = '#2b2b2b';
 ctx.fillStyle = BACKGROUND_COLOR;
 
-// Отступ «земли» от нижнего края canvas, px. Не хранится в FrogState —
-// логика лягушки не должна знать о размерах canvas по вертикали (plan.md
-// §«render/frog.ts», AC-3 требует только горизонтальные границы).
-const GROUND_MARGIN_PX = 40;
+// Отступ «земли» от нижнего края canvas, px (game/tuning.ts). Не хранится в
+// FrogState — логика лягушки не должна знать о размерах canvas по
+// вертикали (plan.md §«render/frog.ts», AC-3 требует только горизонтальные
+// границы).
 const groundY = canvas.height - GROUND_MARGIN_PX;
 
 const worldState = createWorldState(canvas.width);
@@ -40,7 +41,7 @@ let previousScore = worldState.score;
 
 createGameLoop((deltaTime) => {
   const frogInput = input.read();
-  updateWorld(worldState, frogInput, deltaTime, canvas.width, canvas.height, groundY);
+  updateWorld(worldState, frogInput, deltaTime, canvas.width, groundY);
 
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
