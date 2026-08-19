@@ -9,17 +9,21 @@
  * отличимая присевшая поза (AC-10).
  */
 
-import { FROG_HEIGHT_PX, FROG_WIDTH_PX, type FrogState } from '../game/frog';
+import { getFrogRect, type FrogState } from '../game/frog';
 
 const FROG_COLOR = '#2ecc71';
 const FROG_CROUCH_COLOR = '#27ae60';
-const CROUCH_HEIGHT_MULTIPLIER = 0.5;
 
+/**
+ * T013 (002-insects-and-bonuses): геометрия (x/y/ширина/высота) больше не
+ * вычисляется здесь на месте — единственный источник истины теперь
+ * getFrogRect() из game/frog.ts (см. T008). Формула идентична прежней
+ * локальной, поведение drawFrog не изменилось.
+ */
 export function drawFrog(ctx: CanvasRenderingContext2D, state: FrogState, groundY: number): void {
-  const height = state.isCrouching ? FROG_HEIGHT_PX * CROUCH_HEIGHT_MULTIPLIER : FROG_HEIGHT_PX;
+  const rect = getFrogRect(state, groundY);
   const color = state.isCrouching ? FROG_CROUCH_COLOR : FROG_COLOR;
-  const y = groundY - state.jumpOffsetY - height;
 
   ctx.fillStyle = color;
-  ctx.fillRect(state.x, y, FROG_WIDTH_PX, height);
+  ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
 }

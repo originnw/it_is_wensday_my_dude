@@ -9,7 +9,14 @@
  * относящиеся к прыжку/приседанию, объявлены и инициализированы корректными
  * дефолтами (data-model.md «Начальное состояние»), но их логика обновления
  * реализуется в T006 (прыжок) и T007 (приседание) — см. tasks.md.
+ *
+ * T008 (002-insects-and-bonuses): добавлена getFrogRect() — вычисляет AABB
+ * тела лягушки в текущем визуальном состоянии (стоя/присев/в прыжке) через
+ * geometry.ts::Rect, без знания о Canvas. Единственный источник истины,
+ * переиспользуется render/frog.ts (T013) и game/world.ts (столкновения).
  */
+
+import type { Rect } from './geometry';
 
 // T005: значение скорректировано с изначального дефолта plan.md (240) до 180.
 // Причина: тест "AC-1: перемещает лягушку влево с постоянной скоростью" (frog.test.ts)
@@ -25,6 +32,11 @@ export const FROG_HEIGHT_PX = 32;
 export const JUMP_DURATION_S = 0.5;
 export const JUMP_HEIGHT_PX = 120;
 export const CROUCH_JUMP_HEIGHT_MULTIPLIER = 1.5;
+// T008 (002-insects-and-bonuses): перенесено из render/frog.ts (было
+// CROUCH_HEIGHT_MULTIPLIER, локальная константа рендера) — теперь
+// единственный источник истины, т.к. getFrogRect() нужен и чистой логике
+// (game/world.ts, AC-5/AC-8), которая не может импортировать render/*.
+export const FROG_CROUCH_HEIGHT_MULTIPLIER = 0.5;
 
 // T006, нетривиальное решение (не зафиксировано в plan.md буквально):
 // сравнение jumpElapsedSeconds >= JUMP_DURATION_S для приземления сделано
@@ -146,4 +158,23 @@ export function updateFrog(
   // Приседание (AC-10, AC-11) — см. комментарий к функции выше: строка
   // перенесена сюда из T007 как необходимое условие зелёного T003/AC-14.
   state.isCrouching = input.crouch && !state.isAirborne;
+}
+
+/**
+ * Вычисляет прямоугольную зону тела лягушки (AABB) в её текущем визуальном
+ * состоянии — стоя, присев или в прыжке. Формула идентична той, что
+ * применялась в render/frog.ts до T008 (высота уменьшается множителем при
+ * приседании, нижний край остаётся на groundY; jumpOffsetY сдвигает
+ * прямоугольник вверх от позиции стоя).
+ */
+export function getFrogRect(state: FrogState, groundY: number): Rect {
+  const height = state.isCrouching ? FROG_HEIGHT_PX * FROG_CROUCH_HEIGHT_MULTIPLIER : FROG_HEIGHT_PX;
+  const y = groundY - state.jumpOffsetY - height;
+
+  return {
+    x: state.x,
+    y,
+    width: FROG_WIDTH_PX,
+    height,
+  };
 }

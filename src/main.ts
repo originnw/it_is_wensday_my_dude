@@ -1,9 +1,11 @@
 import './style.css';
 import { setupCanvas } from './render/canvas';
 import { createGameLoop } from './game/loop';
-import { createFrogState, updateFrog } from './game/frog';
+import { createWorldState, updateWorld } from './game/world';
 import { createInputTracker } from './game/input';
 import { drawFrog } from './render/frog';
+import { drawInsects } from './render/insects';
+import { drawBonuses } from './render/bonuses';
 
 const { canvas, ctx } = setupCanvas();
 
@@ -19,7 +21,7 @@ ctx.fillStyle = BACKGROUND_COLOR;
 const GROUND_MARGIN_PX = 40;
 const groundY = canvas.height - GROUND_MARGIN_PX;
 
-const frogState = createFrogState(canvas.width);
+const worldState = createWorldState(canvas.width);
 const input = createInputTracker();
 
 // FPS-счётчик — только в dev-сборке, через динамический импорт, чтобы
@@ -32,13 +34,24 @@ if (import.meta.env.DEV) {
   fps = createFpsCounter();
 }
 
+// Диагностика счёта — только в dev-сборке, по аналогии с fps-счётчиком выше.
+// Не UI/HUD-элемент (spec.md «Не-цели»), на canvas не рисуется.
+let previousScore = worldState.score;
+
 createGameLoop((deltaTime) => {
   const frogInput = input.read();
-  updateFrog(frogState, frogInput, deltaTime, canvas.width);
+  updateWorld(worldState, frogInput, deltaTime, canvas.width, canvas.height, groundY);
 
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawFrog(ctx, frogState, groundY);
+  drawFrog(ctx, worldState.frog, groundY);
+  drawInsects(ctx, worldState.insects.list);
+  drawBonuses(ctx, worldState.bonuses.list);
+
+  if (import.meta.env.DEV && worldState.score !== previousScore) {
+    console.log('score:', worldState.score);
+    previousScore = worldState.score;
+  }
 
   fps?.report(deltaTime);
 }).start();
